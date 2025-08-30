@@ -22,13 +22,13 @@ pub fn init() Self {
     return Self{};
 }
 
-pub fn deinit(self: Self) void {
+pub fn deinit(self: *Self) void {
     _ = self;
 
     _ = c.endwin();
 }
 
-pub fn print(self: Self, comptime fmt: []const u8, args: anytype) !void {
+pub fn print(self: *Self, comptime fmt: []const u8, args: anytype) !void {
     _ = self;
 
     var buf: [256]u8 = undefined;
@@ -42,26 +42,44 @@ pub fn print(self: Self, comptime fmt: []const u8, args: anytype) !void {
     }
 }
 
-pub fn get_char(self: Self) u16 {
+pub fn get_char(self: *Self) u16 {
     _ = self;
 
     return @as(u16, @intCast(c.getch()));
 }
 
-pub fn attr_on(self: Self, attr: c_int) void {
+pub fn attr_on(self: *Self, attr: c_int) void {
     _ = self;
 
     _ = c.attron(attr);
 }
 
-pub fn attr_off(self: Self, attr: c_int) void {
+pub fn attr_off(self: *Self, attr: c_int) void {
     _ = self;
 
     _ = c.attroff(attr);
 }
 
-pub fn refresh(self: Self) void {
+pub fn refresh(self: *Self) void {
     _ = self;
 
     _ = c.refresh();
+}
+
+pub fn move(self: *Self, y: c_int, x: c_int) void {
+    _ = self;
+
+    _ = c.move(y, x);
+}
+
+pub fn get_y(self: *Self) c_int {
+    _ = self;
+
+    return c.getcury(c.stdscr);
+}
+
+pub fn get_x(self: *Self) c_int {
+    _ = self;
+
+    return c.getcurx(c.stdscr);
 }

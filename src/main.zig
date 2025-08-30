@@ -10,7 +10,7 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const curses = Curses.init();
+    var curses = Curses.init();
     defer curses.deinit();
 
     const tree = Node{
@@ -36,21 +36,34 @@ pub fn main() !void {
         },
     };
 
-    tree.printTreeString(curses);
+    tree.printTreeString(&curses);
 
-    while (next_char(curses)) |ch| {
+    curses.move(0, 0);
+
+    while (next_char(&curses)) |ch| {
         switch (ch) {
-            'e' => {
-                try curses.print("New file\n", .{});
+            'j' => {
+                const y = curses.get_y();
+                const x = curses.get_x();
+
+                curses.move(y + 1, x);
             },
-            else => {},
+            'k' => {
+                const y = curses.get_y();
+                const x = curses.get_x();
+
+                curses.move(y - 1, x);
+            },
+            else => {
+                std.debug.panic("ch: {d}\n", .{ch});
+            },
         }
 
         curses.refresh();
     }
 }
 
-fn next_char(curses: Curses) ?u16 {
+fn next_char(curses: *Curses) ?u16 {
     const ch = curses.get_char();
     if (ch == 27 or ch == 'q') {
         return null;

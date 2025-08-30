@@ -6,7 +6,7 @@ pub const Entry = struct {
     name: []const u8,
     value: u64,
 
-    pub fn printTreeString(self: Entry, curses: Curses) void {
+    pub fn printTreeString(self: Entry, curses: *Curses) void {
         curses.print("{s}: {d}\n", .{ self.name, self.value }) catch @panic("Failed to print entry");
     }
 };
@@ -16,7 +16,7 @@ pub const Unit = struct {
     name: []const u8,
     children: ?[]const Node,
 
-    pub fn printTreeString(self: Unit, curses: Curses) void {
+    pub fn printTreeString(self: Unit, curses: *Curses) void {
         curses.attr_on(Curses.c.COLOR_PAIR(1));
         curses.attr_on(Curses.c.A_BOLD);
         curses.print(" {s}\n", .{self.name}) catch @panic("Failed to print unit");
@@ -41,7 +41,7 @@ pub const Node = union(enum) {
     Entry: Entry,
     Unit: Unit,
 
-    pub fn printTreeString(self: Node, curses: Curses) void {
+    pub fn printTreeString(self: Node, curses: *Curses) void {
         switch (self) {
             .Entry => |entry| entry.printTreeString(curses),
             .Unit => |unit| unit.printTreeString(curses),

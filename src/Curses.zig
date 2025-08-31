@@ -11,7 +11,7 @@ pub fn init() Self {
     _ = c.setlocale(c.LC_ALL, "");
 
     _ = c.initscr();
-    _ = c.raw();
+    _ = c.cbreak();
     _ = c.noecho();
     _ = c.keypad(c.stdscr, true);
     _ = c.use_default_colors();
@@ -31,7 +31,7 @@ pub fn deinit(self: *Self) void {
 pub fn print(self: *Self, comptime fmt: []const u8, args: anytype) !void {
     _ = self;
 
-    var buf: [256]u8 = undefined;
+    var buf: [4096]u8 = undefined;
     const formatted = try std.fmt.bufPrint(&buf, fmt, args);
 
     if (formatted.len < buf.len) {
@@ -66,6 +66,12 @@ pub fn refresh(self: *Self) void {
     _ = c.refresh();
 }
 
+pub fn clear(self: *Self) void {
+    _ = self;
+
+    _ = c.clear();
+}
+
 pub fn move(self: *Self, y: c_int, x: c_int) void {
     _ = self;
 
@@ -83,3 +89,52 @@ pub fn get_x(self: *Self) c_int {
 
     return c.getcurx(c.stdscr);
 }
+
+pub const Dialog = struct {
+    allocator: std.mem.Allocator,
+    value: []const u8,
+
+    pub fn init(allocator: std.mem.Allocator, h: u32, w: u32, name: []const u8) Dialog {
+        const start_y = @divFloor(@as(u32, @intCast(c.LINES)) - h, 2);
+        const start_x = @divFloor(@as(u32, @intCast(c.COLS)) - w, 2);
+
+        const window = c.newwin(@as(c_int, @intCast(h)), @as(c_int, @intCast(w)), @as(c_int, @intCast(start_y)), @as(c_int, @intCast(start_x)));
+        defer _ = c.delwin(window);
+
+        if (window == null) {
+            @panic("Failed to create window");
+        }
+
+        _ = c.box(window, 0, 0);
+        _ = c.mvwprintw(window, 1, 2, name.ptr);
+        _ = c.mvwprintw(window, @as(c_int, @intCast(h)) - 2, 2, "<Enter> when done");
+
+        _ = c.wrefresh(window);
+
+        _ = c.echo();
+        _ = c.curs_set(1);
+
+        var buf: [256]u8 = undefined;
+
+        _ = c.mvwgetnstr(window, 2, 2, buf[0..], buf.len - 2);
+
+        _ = c.noecho();
+
+        var len: usize = 0;
+        while (len < buf.len and buf[len] != 0) {
+            len += 1;
+        }
+
+        const mem = allocator.alloc(u8, len) catch @panic("Failed to allocate memory");
+        std.mem.copyForwards(u8, mem, buf[0..len]);
+
+        return .{
+            .allocator = allocator,
+            .value = mem,
+        };
+    }
+
+    pub fn deinit(self: *Dialog) void {
+        self.allocator.free(self.value);
+    }
+};

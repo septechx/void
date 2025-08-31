@@ -13,31 +13,19 @@ pub fn main() !void {
     var curses = Curses.init();
     defer curses.deinit();
 
-    var children = std.ArrayList(Node).init(allocator);
-    children.append(.{
-        .Entry = .{
-            .allocator = allocator,
-            .name = "a",
-            .value = 1,
-        },
-    }) catch @panic("Failed to append child");
-    children.append(.{
-        .Entry = .{
-            .allocator = allocator,
-            .name = "b",
-            .value = 2,
-        },
-    }) catch @panic("Failed to append child");
-
     var tree = Node{
-        .Unit = .{
-            .allocator = allocator,
-            .name = "root",
-            .children = children,
-        },
+        .Unit = try Unit.init(allocator, "root"),
     };
+    defer tree.deinit();
 
-    tree.printTreeString(&curses);
+    try tree.Unit.children.append(.{
+        .Entry = try Entry.init(allocator, "a", 1),
+    });
+    try tree.Unit.children.append(.{
+        .Entry = try Entry.init(allocator, "b", 2),
+    });
+
+    library.printTree(&curses, tree);
 
     curses.move(0, 0);
 
@@ -62,27 +50,35 @@ pub fn main() !void {
                 var value_dialog = Curses.Dialog.init(allocator, 7, 45, "Portal Address: ");
                 defer value_dialog.deinit();
 
-                const value = std.fmt.parseUnsigned(u64, value_dialog.value, 16) catch @panic("Failed to parse portal address");
+                const value = try std.fmt.parseUnsigned(u64, value_dialog.value, 16);
 
-                try tree.Unit.children.?.append(.{
-                    .Entry = .{
-                        .allocator = allocator,
-                        .name = name_dialog.value,
-                        .value = value,
-                    },
-                });
+                var parts = std.mem.splitScalar(u8, name_dialog.value, ':');
+
+                var current_children = &tree.Unit.children;
+                while (parts.next()) |part| {
+                    const is_last = parts.peek() == null;
+
+                    if (is_last) {
+                        try current_children.append(.{
+                            .Entry = try Entry.init(allocator, part, value),
+                        });
+                    } else {
+                        try current_children.append(.{
+                            .Unit = try Unit.init(allocator, part),
+                        });
+                        current_children = &current_children.items[current_children.items.len - 1].Unit.children;
+                    }
+                }
 
                 curses.clear();
                 curses.refresh();
 
-                tree.printTreeString(&curses);
+                library.printTree(&curses, tree);
 
                 const y = curses.get_y();
                 curses.move(y, 0);
             },
-            else => {
-                std.debug.panic("ch: {d}\n", .{ch});
-            },
+            else => {},
         }
 
         curses.refresh();

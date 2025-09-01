@@ -1,29 +1,25 @@
 const std = @import("std");
 const Curses = @import("Curses.zig");
+const storage = @import("storage.zig");
+const parser = @import("parser.zig");
 const library = @import("library.zig");
 const Entry = library.Entry;
 const Unit = library.Unit;
 const Node = library.Node;
 
 pub fn main() !void {
-    var arena = std.heap.ArenaAllocator.init(std.heap.c_allocator);
-    defer arena.deinit();
-    const allocator = arena.allocator();
+    // var arena = std.heap.ArenaAllocator.init(std.heap.c_allocator);
+    // defer arena.deinit();
+    // const allocator = arena.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    defer std.debug.assert(gpa.deinit() == .ok);
+    const allocator = gpa.allocator();
 
     var curses = Curses.init();
     defer curses.deinit();
 
-    var tree = Node{
-        .Unit = try Unit.init(allocator, "root"),
-    };
+    var tree = try storage.read(allocator);
     defer tree.deinit();
-
-    try tree.Unit.children.append(.{
-        .Entry = try Entry.init(allocator, "a", 1),
-    });
-    try tree.Unit.children.append(.{
-        .Entry = try Entry.init(allocator, "b", 2),
-    });
 
     library.printTree(&curses, tree);
 
@@ -44,10 +40,18 @@ pub fn main() !void {
                 curses.move(y - 1, x);
             },
             'a' => {
-                var name_dialog = Curses.Dialog.init(allocator, 7, 45, "Name: ");
+                var name_dialog = Curses.Dialog.init(allocator, 8, 48, "Name: ", struct {
+                    pub fn validate(value: []const u8) bool {
+                        return value.len > 0;
+                    }
+                }.validate);
                 defer name_dialog.deinit();
 
-                var value_dialog = Curses.Dialog.init(allocator, 7, 45, "Portal Address: ");
+                var value_dialog = Curses.Dialog.init(allocator, 8, 48, "Portal Address: ", struct {
+                    pub fn validate(value: []const u8) bool {
+                        return value.len == 16;
+                    }
+                }.validate);
                 defer value_dialog.deinit();
 
                 const value = try std.fmt.parseUnsigned(u64, value_dialog.value, 16);
@@ -55,7 +59,7 @@ pub fn main() !void {
                 var parts = std.mem.splitScalar(u8, name_dialog.value, ':');
 
                 var current_children = &tree.Unit.children;
-                while (parts.next()) |part| {
+                blk: while (parts.next()) |part| {
                     const is_last = parts.peek() == null;
 
                     if (is_last) {
@@ -63,6 +67,18 @@ pub fn main() !void {
                             .Entry = try Entry.init(allocator, part, value),
                         });
                     } else {
+                        for (current_children.items) |*child| {
+                            switch (child.*) {
+                                .Unit => {},
+                                else => continue,
+                            }
+
+                            if (std.mem.eql(u8, child.Unit.name, part)) {
+                                current_children = &child.Unit.children;
+                                continue :blk;
+                            }
+                        }
+
                         try current_children.append(.{
                             .Unit = try Unit.init(allocator, part),
                         });
@@ -77,6 +93,8 @@ pub fn main() !void {
 
                 const y = curses.get_y();
                 curses.move(y, 0);
+
+                try storage.write(allocator, tree);
             },
             else => {},
         }
@@ -92,4 +110,9 @@ fn next_char(curses: *Curses) ?u16 {
     } else {
         return ch;
     }
+}
+
+test {
+    _ = parser;
+    std.testing.refAllDecls(@This());
 }

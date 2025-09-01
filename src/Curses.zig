@@ -94,7 +94,7 @@ pub const Dialog = struct {
     allocator: std.mem.Allocator,
     value: []const u8,
 
-    pub fn init(allocator: std.mem.Allocator, h: u32, w: u32, name: []const u8) Dialog {
+    pub fn init(allocator: std.mem.Allocator, h: u32, w: u32, name: []const u8, comptime validate: fn (value: []const u8) bool) Dialog {
         const start_y = @divFloor(@as(u32, @intCast(c.LINES)) - h, 2);
         const start_x = @divFloor(@as(u32, @intCast(c.COLS)) - w, 2);
 
@@ -123,6 +123,10 @@ pub const Dialog = struct {
         var len: usize = 0;
         while (len < buf.len and buf[len] != 0) {
             len += 1;
+        }
+
+        if (!validate(buf[0..len])) {
+            return Dialog.init(allocator, h, w, "Invalid value, please try again.", validate);
         }
 
         const mem = allocator.alloc(u8, len) catch @panic("Failed to allocate memory");

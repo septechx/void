@@ -39,24 +39,18 @@ pub const Unit = struct {
         curses.attr_off(Curses.c.A_BOLD);
         curses.attr_off(Curses.c.COLOR_PAIR(1));
 
-        const padding_alloc = genPadding(self.allocator, padding) catch @panic("Failed to generate padding");
+        const padding_alloc = genPadding(self.allocator, padding, is_last) catch @panic("Failed to generate padding");
         defer self.allocator.free(padding_alloc);
 
         for (self.children.items, 0..) |child, i| {
-            if (is_last) {
-                curses.print("│", .{}) catch @panic("Failed to print indent");
-            }
-
-            if (i == self.children.items.len - 1) {
-                curses.print("{s}└── ", .{padding_alloc}) catch @panic("Failed to print indent");
-            } else {
-                curses.print("{s}├── ", .{padding_alloc}) catch @panic("Failed to print indent");
-            }
-
             const is_last_child = i == self.children.items.len - 1;
-            const indent_mod: usize = if (is_last_child) 4 else 3;
+            const branch = if (is_last_child) "└── " else "├── ";
 
-            child.printTreeString(curses, padding + indent_mod, !is_last_child);
+            curses.print("{s}{s}", .{ padding_alloc, branch }) catch @panic("Failed to print indent");
+
+            const padding_mod: usize = if (is_last_child) 4 else 3;
+            const new_padding: usize = padding + padding_mod;
+            child.printTreeString(curses, new_padding, is_last_child);
         }
     }
 
@@ -98,14 +92,22 @@ pub const Node = union(enum) {
     }
 };
 
-fn genPadding(allocator: std.mem.Allocator, depth: usize) ![]const u8 {
-    const padding_alloc = try allocator.alloc(u8, depth);
+fn genPadding(allocator: std.mem.Allocator, depth: usize, is_last: bool) ![]const u8 {
+    if (depth == 0) return "";
 
-    for (padding_alloc) |*padding| {
-        padding.* = ' ';
+    var result = try std.ArrayList(u8).initCapacity(allocator, depth);
+    errdefer result.deinit();
+
+    var i: usize = 0;
+    while (i < depth) : (i += 1) {
+        if (i % 3 == 0 and !is_last) {
+            try result.appendSlice("│ ");
+        } else {
+            try result.append(' ');
+        }
     }
 
-    return padding_alloc;
+    return result.toOwnedSlice();
 }
 
 pub fn printTree(curses: *Curses, tree: Node) void {

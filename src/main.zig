@@ -32,13 +32,19 @@ pub fn main() !void {
                 const x = curses.get_x();
 
                 curses.move(y + 1, x);
+
+                curses.refresh();
             },
+
             'k', Curses.c.KEY_UP => {
                 const y = curses.get_y();
                 const x = curses.get_x();
 
                 curses.move(y - 1, x);
+
+                curses.refresh();
             },
+
             'a' => {
                 var name_dialog = Curses.Dialog.init(allocator, 8, 48, "Name: ", struct {
                     pub fn validate(value: []const u8) bool {
@@ -86,21 +92,73 @@ pub fn main() !void {
                     }
                 }
 
-                curses.clear();
-                curses.refresh();
-
-                library.printTree(&curses, tree);
-
-                const y = curses.get_y();
-                curses.move(y, 0);
-
-                try storage.write(allocator, tree);
+                try reload(allocator, &curses, &tree);
             },
+
+            'd' => {
+                var name_dialog = Curses.Dialog.init(allocator, 8, 48, "Name: ", struct {
+                    pub fn validate(value: []const u8) bool {
+                        return value.len > 0;
+                    }
+                }.validate);
+                defer name_dialog.deinit();
+
+                var parts = std.mem.splitScalar(u8, name_dialog.value, ':');
+
+                var current_children = &tree.Unit.children;
+                blk: while (parts.next()) |part| {
+                    const is_last = parts.peek() == null;
+
+                    if (is_last) {
+                        for (current_children.items, 0..) |*child, i| {
+                            switch (child.*) {
+                                .Unit => {
+                                    if (std.mem.eql(u8, child.Unit.name, part)) {
+                                        var node = current_children.orderedRemove(i);
+                                        node.Unit.deinit();
+                                    }
+                                },
+                                .Entry => {
+                                    if (std.mem.eql(u8, child.Entry.name, part)) {
+                                        var node = current_children.orderedRemove(i);
+                                        node.Entry.deinit();
+                                    }
+                                },
+                            }
+                        }
+                    } else {
+                        for (current_children.items) |*child| {
+                            switch (child.*) {
+                                .Unit => {},
+                                else => continue,
+                            }
+
+                            if (std.mem.eql(u8, child.Unit.name, part)) {
+                                current_children = &child.Unit.children;
+                                continue :blk;
+                            }
+                        }
+                    }
+                }
+
+                try reload(allocator, &curses, &tree);
+            },
+
             else => {},
         }
-
-        curses.refresh();
     }
+}
+
+fn reload(allocator: std.mem.Allocator, curses: *Curses, tree: *Node) !void {
+    curses.clear();
+    curses.refresh();
+
+    library.printTree(curses, tree.*);
+
+    const y = curses.get_y();
+    curses.move(y, 0);
+
+    try storage.write(allocator, tree.*);
 }
 
 fn next_char(curses: *Curses) ?u16 {

@@ -112,7 +112,6 @@ pub const Dialog = struct {
         _ = c.wrefresh(window);
 
         _ = c.echo();
-        _ = c.curs_set(1);
 
         var buf: [256]u8 = undefined;
 

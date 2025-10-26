@@ -8,9 +8,6 @@ const Unit = library.Unit;
 const Node = library.Node;
 
 pub fn main() !void {
-    // var arena = std.heap.ArenaAllocator.init(std.heap.c_allocator);
-    // defer arena.deinit();
-    // const allocator = arena.allocator();
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
     defer std.debug.assert(gpa.deinit() == .ok);
     const allocator = gpa.allocator();
@@ -108,12 +105,13 @@ pub fn main() !void {
                 const y = curses.get_y();
 
                 if (library.findNodeByY(&tree, y)) |node_to_delete| {
-                    // TODO: Handle root node deletion warning
                     if (library.findParent(&tree, node_to_delete)) |result| {
                         var node = result.parent.children.orderedRemove(result.index);
                         node.deinit();
 
                         try reload(allocator, &curses, &tree);
+                    } else {
+                        Curses.Toast.init(3, 50, "Cannot delete root node");
                     }
                 }
             },

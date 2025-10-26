@@ -125,7 +125,8 @@ pub const Dialog = struct {
         }
 
         if (!validate(buf[0..len])) {
-            return Dialog.init(allocator, h, w, "Invalid value, please try again.", validate);
+            Toast.init(3, 50, "Invalid value, please try again.");
+            return Dialog.init(allocator, h, w, name, validate);
         }
 
         const mem = allocator.alloc(u8, len) catch @panic("Failed to allocate memory");
@@ -139,5 +140,30 @@ pub const Dialog = struct {
 
     pub fn deinit(self: *Dialog) void {
         self.allocator.free(self.value);
+    }
+};
+
+pub const Toast = struct {
+    pub fn init(h: u32, w: u32, comptime message: []const u8) void {
+        const cur_y = c.getcury(c.stdscr);
+        const cur_x = c.getcurx(c.stdscr);
+
+        const start_y = 0;
+        const start_x = c.COLS - @as(c_int, @intCast(w)) - 1;
+
+        const window = c.newwin(@as(c_int, @intCast(h)), @as(c_int, @intCast(w)), start_y, start_x);
+        defer _ = c.delwin(window);
+
+        if (window == null) {
+            @panic("Failed to create window");
+        }
+
+        _ = c.box(window, 0, 0);
+        _ = c.mvwprintw(window, 1, 2, message.ptr);
+
+        _ = c.wrefresh(window);
+
+        _ = c.move(cur_y, cur_x);
+        _ = c.doupdate();
     }
 };

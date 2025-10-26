@@ -164,9 +164,11 @@ pub const Toast = struct {
             @panic("Failed to create window");
         }
 
+        const msg = "⚠ " ++ message;
+
         _ = c.wattron(window, c.COLOR_PAIR(Color.YELLOW));
         _ = c.box(window, 0, 0);
-        _ = c.mvwprintw(window, 1, 2, message.ptr);
+        _ = c.mvwprintw(window, 1, 2, msg.ptr);
         _ = c.wattroff(window, c.COLOR_PAIR(Color.YELLOW));
 
         _ = c.wrefresh(window);

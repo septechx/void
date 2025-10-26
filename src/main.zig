@@ -62,9 +62,18 @@ pub fn main() !void {
 
                 const value = try std.fmt.parseUnsigned(u64, value_dialog.value, 16);
 
+                const y = curses.get_y();
+
+                var current_children = if (library.findNodeByY(&tree, y)) |node|
+                    switch (node.*) {
+                        .Unit => |*unit| &unit.children,
+                        .Entry => if (library.findParent(&tree, node)) |p| &p.parent.children else &tree.Unit.children,
+                    }
+                else
+                    &tree.Unit.children;
+
                 var parts = std.mem.splitScalar(u8, name_dialog.value, ':');
 
-                var current_children = &tree.Unit.children;
                 blk: while (parts.next()) |part| {
                     const is_last = parts.peek() == null;
 

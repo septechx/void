@@ -96,52 +96,17 @@ pub fn main() !void {
             },
 
             'd' => {
-                var name_dialog = Curses.Dialog.init(allocator, 8, 48, "Name: ", struct {
-                    pub fn validate(value: []const u8) bool {
-                        return value.len > 0;
-                    }
-                }.validate);
-                defer name_dialog.deinit();
+                const y = curses.get_y();
 
-                var parts = std.mem.splitScalar(u8, name_dialog.value, ':');
+                if (library.findNodeByY(&tree, y)) |node_to_delete| {
+                    // TODO: Handle root node deletion warning
+                    if (library.findParent(&tree, node_to_delete)) |result| {
+                        var node = result.parent.children.orderedRemove(result.index);
+                        node.deinit();
 
-                var current_children = &tree.Unit.children;
-                blk: while (parts.next()) |part| {
-                    const is_last = parts.peek() == null;
-
-                    if (is_last) {
-                        for (current_children.items, 0..) |*child, i| {
-                            switch (child.*) {
-                                .Unit => {
-                                    if (std.mem.eql(u8, child.Unit.name, part)) {
-                                        var node = current_children.orderedRemove(i);
-                                        node.Unit.deinit();
-                                    }
-                                },
-                                .Entry => {
-                                    if (std.mem.eql(u8, child.Entry.name, part)) {
-                                        var node = current_children.orderedRemove(i);
-                                        node.Entry.deinit();
-                                    }
-                                },
-                            }
-                        }
-                    } else {
-                        for (current_children.items) |*child| {
-                            switch (child.*) {
-                                .Unit => {},
-                                else => continue,
-                            }
-
-                            if (std.mem.eql(u8, child.Unit.name, part)) {
-                                current_children = &child.Unit.children;
-                                continue :blk;
-                            }
-                        }
+                        try reload(allocator, &curses, &tree);
                     }
                 }
-
-                try reload(allocator, &curses, &tree);
             },
 
             else => {},
@@ -162,7 +127,7 @@ fn reload(allocator: std.mem.Allocator, curses: *Curses, tree: *Node) !void {
 }
 
 fn next_char(curses: *Curses) ?u16 {
-    const ch = curses.get_char();
+    const ch = curses.next_char();
     if (ch == 27 or ch == 'q') {
         return null;
     } else {

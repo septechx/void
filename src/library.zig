@@ -113,3 +113,55 @@ fn genPadding(allocator: std.mem.Allocator, depth: usize, is_last: bool) ![]cons
 pub fn printTree(curses: *Curses, tree: Node) void {
     tree.printTreeString(curses, 0, false);
 }
+
+fn findNodeByYRecursive(node: *Node, target_y: i32, current_y: *i32) ?*Node {
+    if (current_y.* == target_y) {
+        return node;
+    }
+    current_y.* += 1;
+
+    if (node.* == .Unit) {
+        for (node.Unit.children.items) |*child| {
+            if (findNodeByYRecursive(child, target_y, current_y)) |found| {
+                return found;
+            }
+        }
+    }
+
+    return null;
+}
+
+pub fn findNodeByY(tree: *Node, y: i32) ?*Node {
+    var current_y: i32 = 0;
+    return findNodeByYRecursive(tree, y, &current_y);
+}
+
+pub const ParentSearchResult = struct {
+    parent: *Unit,
+    index: usize,
+};
+
+fn findParentRecursive(target: *const Node, parent_candidate: *Unit) ?ParentSearchResult {
+    for (parent_candidate.children.items, 0..) |*child, i| {
+        if (child == target) {
+            return ParentSearchResult{
+                .parent = parent_candidate,
+                .index = i,
+            };
+        }
+
+        if (child.* == .Unit) {
+            if (findParentRecursive(target, &child.Unit)) |found| {
+                return found;
+            }
+        }
+    }
+
+    return null;
+}
+
+pub fn findParent(root: *Node, target: *const Node) ?ParentSearchResult {
+    if (root == target) return null; // Root has no parent
+    if (root.* != .Unit) return null; // Root must be a unit to have children
+    return findParentRecursive(target, &root.Unit);
+}

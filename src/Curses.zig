@@ -42,7 +42,7 @@ pub fn print(self: *Self, comptime fmt: []const u8, args: anytype) !void {
     }
 }
 
-pub fn get_char(self: *Self) u16 {
+pub fn next_char(self: *Self) u16 {
     _ = self;
 
     return @as(u16, @intCast(c.getch()));

@@ -18,6 +18,7 @@ pub fn init() Self {
     _ = c.start_color();
 
     _ = c.init_pair(1, c.COLOR_BLUE, -1);
+    _ = c.init_pair(2, c.COLOR_YELLOW, -1);
 
     return Self{};
 }
@@ -90,6 +91,11 @@ pub fn get_x(self: *Self) c_int {
     return c.getcurx(c.stdscr);
 }
 
+pub const Color = struct {
+    pub const BLUE = 1;
+    pub const YELLOW = 2;
+};
+
 pub const Dialog = struct {
     allocator: std.mem.Allocator,
     value: []const u8,
@@ -158,8 +164,10 @@ pub const Toast = struct {
             @panic("Failed to create window");
         }
 
+        _ = c.wattron(window, c.COLOR_PAIR(Color.YELLOW));
         _ = c.box(window, 0, 0);
         _ = c.mvwprintw(window, 1, 2, message.ptr);
+        _ = c.wattroff(window, c.COLOR_PAIR(Color.YELLOW));
 
         _ = c.wrefresh(window);
 

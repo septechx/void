@@ -33,11 +33,11 @@ pub const Unit = struct {
     children: std.ArrayList(Node),
 
     pub fn printTreeString(self: Unit, curses: *Curses, padding: usize, is_last: bool) void {
-        curses.attr_on(Curses.c.COLOR_PAIR(1));
+        curses.attr_on(Curses.c.COLOR_PAIR(Curses.Color.BLUE));
         curses.attr_on(Curses.c.A_BOLD);
         curses.print(" {s}\n", .{self.name}) catch @panic("Failed to print unit");
         curses.attr_off(Curses.c.A_BOLD);
-        curses.attr_off(Curses.c.COLOR_PAIR(1));
+        curses.attr_off(Curses.c.COLOR_PAIR(Curses.Color.BLUE));
 
         const padding_alloc = genPadding(self.allocator, padding, is_last) catch @panic("Failed to generate padding");
         defer self.allocator.free(padding_alloc);

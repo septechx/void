@@ -153,6 +153,7 @@ pub const Toast = struct {
     pub fn init(h: u32, w: u32, comptime message: []const u8) void {
         const cur_y = c.getcury(c.stdscr);
         const cur_x = c.getcurx(c.stdscr);
+        defer _ = c.move(cur_y, cur_x);
 
         const start_y = 0;
         const start_x = c.COLS - @as(c_int, @intCast(w)) - 1;
@@ -173,7 +174,6 @@ pub const Toast = struct {
 
         _ = c.wrefresh(window);
 
-        _ = c.move(cur_y, cur_x);
         _ = c.doupdate();
     }
 };

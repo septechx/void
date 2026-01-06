@@ -75,7 +75,7 @@ pub const Parser = struct {
                 }
 
                 const child = try parser.parseKV();
-                try node.Unit.children.append(child);
+                try node.Unit.children.append(parser.allocator, child);
             }
 
             try parser.expect(.Comma);
@@ -105,7 +105,7 @@ const Lexer = struct {
     tokens: std.ArrayList(Token),
 
     pub fn tokenize(allocator: std.mem.Allocator, input: []const u8) !Lexer {
-        var tokens = std.ArrayList(Token).init(allocator);
+        var tokens: std.ArrayList(Token) = .empty;
 
         var i: usize = 0;
         while (i < input.len) {
@@ -113,19 +113,19 @@ const Lexer = struct {
 
             switch (ch) {
                 '[' => {
-                    try tokens.append(.OpenBracket);
+                    try tokens.append(allocator, .OpenBracket);
                     i += 1;
                 },
                 ']' => {
-                    try tokens.append(.CloseBracket);
+                    try tokens.append(allocator, .CloseBracket);
                     i += 1;
                 },
                 ':' => {
-                    try tokens.append(.Colon);
+                    try tokens.append(allocator, .Colon);
                     i += 1;
                 },
                 ',' => {
-                    try tokens.append(.Comma);
+                    try tokens.append(allocator, .Comma);
                     i += 1;
                 },
                 else => {
@@ -137,7 +137,7 @@ const Lexer = struct {
                     const literal = try allocator.dupe(u8, input[start..i]);
                     const token = Token{ .Literal = literal };
 
-                    try tokens.append(token);
+                    try tokens.append(allocator, token);
                 },
             }
         }
@@ -158,7 +158,7 @@ const Lexer = struct {
             }
         }
 
-        self.tokens.deinit();
+        self.tokens.deinit(self.allocator);
     }
 };
 

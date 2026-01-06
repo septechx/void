@@ -59,13 +59,13 @@ pub const Unit = struct {
             child.deinit();
         }
 
-        self.children.deinit();
+        self.children.deinit(self.allocator);
         self.allocator.free(self.name);
     }
 
     pub fn init(allocator: std.mem.Allocator, name: []const u8) !Unit {
         const name_alloc = try allocator.dupe(u8, name);
-        const children = std.ArrayList(Node).init(allocator);
+        const children: std.ArrayList(Node) = .empty;
         return .{
             .allocator = allocator,
             .name = name_alloc,
@@ -96,18 +96,18 @@ fn genPadding(allocator: std.mem.Allocator, depth: usize, is_last: bool) ![]cons
     if (depth == 0) return "";
 
     var result = try std.ArrayList(u8).initCapacity(allocator, depth);
-    errdefer result.deinit();
+    errdefer result.deinit(allocator);
 
     var i: usize = 0;
     while (i < depth) : (i += 1) {
         if (i % 3 == 0 and !is_last) {
-            try result.appendSlice("│ ");
+            try result.appendSlice(allocator, "│ ");
         } else {
-            try result.append(' ');
+            try result.append(allocator, ' ');
         }
     }
 
-    return result.toOwnedSlice();
+    return result.toOwnedSlice(allocator);
 }
 
 pub fn printTree(curses: *Curses, tree: Node) void {

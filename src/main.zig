@@ -75,7 +75,7 @@ pub fn main() !void {
                     const is_last = parts.peek() == null;
 
                     if (is_last) {
-                        try current_children.append(.{
+                        try current_children.append(allocator, .{
                             .Entry = try Entry.init(allocator, part, value),
                         });
                     } else {
@@ -91,7 +91,7 @@ pub fn main() !void {
                             }
                         }
 
-                        try current_children.append(.{
+                        try current_children.append(allocator, .{
                             .Unit = try Unit.init(allocator, part),
                         });
                         current_children = &current_children.items[current_children.items.len - 1].Unit.children;
